@@ -5,7 +5,7 @@ from docx import Document
 
 app = Flask(__name__)
 
-# Basic HTML template for the upload form
+# Basic HTML template
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html>
@@ -14,7 +14,7 @@ HTML_TEMPLATE = '''
     <h2>Upload Word Document (.docx)</h2>
     <form method="post" action="/convert" enctype="multipart/form-data">
         <input type="file" name="file" accept=".docx" required>
-        <button type="submit">Convert to Excel</button>
+        <button type="submit">Convert All Tables to Excel</button>
     </form>
 </body>
 </html>
@@ -30,33 +30,39 @@ def convert():
         return "No file uploaded", 400
     
     file = request.files['file']
-    
-    # 1. Read the Word file from the uploaded stream
     doc = Document(file)
     
     if not doc.tables:
         return "No tables found in this document.", 400
 
-    # 2. Extract data (using your logic)
-    table = doc.tables[0] # Processes the first table
-    data = []
-    for row in table.rows:
-        data.append([cell.text.strip() for cell in row.cells])
-    
-    df = pd.DataFrame(data[1:], columns=data[0])
-
-    # 3. Save to an in-memory buffer instead of a disk file
+    # 1. Create an in-memory buffer
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0) # Move to the beginning of the buffer
 
-    # 4. Return the buffer as a downloadable file
+    # 2. Use ExcelWriter to handle multiple sheets
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        for i, table in enumerate(doc.tables):
+            data = []
+            for row in table.rows:
+                # Extract text from each cell in the row
+                data.append([cell.text.strip() for cell in row.cells])
+            
+            if data:
+                # Create DataFrame
+                # Note: This assumes the first row of every table is a header
+                df = pd.DataFrame(data[1:], columns=data[0])
+                
+                # Write to a unique sheet name (e.g., Table_1, Table_2)
+                sheet_name = f'Table_{i+1}'
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    # 3. Prepare the buffer for downloading
+    output.seek(0)
+
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name='converted_table.xlsx'
+        download_name='converted_tables.xlsx'
     )
 
 if __name__ == '__main__':
