@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Word Table to Excel</title>
+</head>
+<body>
+    <h2>Upload Word Document (.docx)</h2>
+    <form method="post" action="/convert" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".docx" required>
+        <button type="submit">Convert All Tables to Excel</button>
+    </form>
+    <h2>Upload Excel</h2>
+    <form method="post" action="/summary" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".docx" required>
+        <button type="submit">Summary</button>
+    </form>
+</body>
+</html>
